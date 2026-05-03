@@ -219,20 +219,12 @@ Two hardcoded users with cookie-based sessions: `rep_sarah` and `mgr_maria`. The
 
 ## Next steps
 
-**Tier 1 — pilot-ready**
-- Salesforce / HubSpot bidirectional sync (lead pull → queue, disposition → CRM)
-- Real-time transcription with live objection surfacing (Deepgram + Haiku classifier)
-- OAuth + RBAC (Google Workspace SSO, per-rep ACLs)
-- Pytest suite + CI (extract → synthesize → brief end-to-end, filter correctness, auth boundaries)
-- OpenTelemetry observability (cost per LLM call, p99 latencies, per-rep usage)
+A few features I'd add next, in order of impact:
 
-**Tier 2 — patterns trustworthy at scale**
-- Bayesian credible intervals on extracted patterns (don't surface noise; require statistically meaningful lift)
-- Pattern provenance UI (click any pattern → see contributing transcripts + audio playback)
-- Continuous learning loop (call dispositions feed back; reinforce patterns that lead to booked demos)
+- Real ElevenLabs audio for similar wins.** Right now the "hear similar wins" button plays TTS of a transcript. Real won-call audio (with consent + redaction) would land harder — reps trust patterns they can hear in someone's voice, not synthetic narration. Plus rep-voice cloning so "here's how Sarah opened a similar deal" actually sounds like Sarah.
 
-**Tier 3 — polish**
-- AI-generated objection responses per-call (~$0.01 per brief, async regeneration)
-- Voice cloning for similar-wins playback (rep's own voice via ElevenLabs)
-- Mobile PWA (the teleprompter is already mobile-friendly)
-- Klue / Crayon competitive intel feed for live competitor pricing changes
+- ** Disposition feedback loop.** Every brief view should emit a `brief_used` event tied to the call's eventual outcome (booked / not booked). Patterns that correlate with brief usage + booking get reinforced in the next synthesis run; patterns that don't get decayed. Right now patterns are extracted once and never validated against whether they actually drove wins — closing this loop turns the system from "AI-generated suggestions" into "evidence-weighted plays."
+
+- ** Pattern provenance UI.** Click any pattern → modal showing the contributing call IDs, the extracted opener_quote from each, the outcome. Reps trust patterns they can verify. The data is already in `evidence_call_ids` on every pattern; just needs a click handler and a modal.
+
+- ** Per-call AI-generated objection responses.** Right now objections are templated string interpolation. With one Claude Haiku call per brief (~2s, ~$0.01) we could regenerate each response tuned to *this prospect's* specific signals — their cuisine, their platform mix, their stated concerns from the touch history. Cache per-restaurant. Trigger as a "regenerate this brief" button so the templated version still loads instantly and the LLM-generated one swaps in when ready.
