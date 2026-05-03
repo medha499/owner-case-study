@@ -900,24 +900,29 @@ async function renderBrief(root) {
   const initials = (r.name || "").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
 
   // Pull data inline (one continuous script, no panels)
+  // 6-stage talk track: opener → discover-setup → branched-pitch → customer-data → objections → close
   const tt = b.talk_track || [];
   const opener = tt.find(s => s.step === 1) || {};
   const discovery = tt.find(s => s.step === 2) || {};
   const pitch = tt.find(s => s.step === 3) || {};
-  const close = tt.find(s => s.step === 5) || {};
+  const customerDisco = tt.find(s => s.step === 4) || {};
+  const close = tt.find(s => s.step === 6) || {};
   const isES = APP_STATE.lang === "es";
   const platforms = pi?.platforms_detected || [];
   const primaryPlatform = platforms[0] || "DoorDash";
   const spend = pi?.estimated_monthly_loss || "$5,000/mo";
 
-  // Pull objections from the talk track (step 4) — single source of truth, server-built
-  const ttObjections = (tt.find(s => s.step === 4)?.objections) || [];
+  // Pull objections from the talk track (step 5) — single source of truth, server-built
+  const ttObjections = (tt.find(s => s.step === 5)?.objections) || [];
   const objections = ttObjections.map(o => ({
     hot: (o.they_say || "").replace(/^["']|["']$/g, "").replace(/\\"/g, '"').slice(0, 80),
     say: o.you_say || "",
     hot_en: (o.they_say_en || "").replace(/^["']|["']$/g, "").slice(0, 80),
     say_en: o.you_say_en || "",
   }));
+
+  // Pull pitch branches (3 conditional responses based on prospect's setup)
+  const pitchBranches = pitch.branches || [];
 
   root.innerHTML = `
     <!-- Top bar: back + restaurant + labeled site button -->
@@ -947,12 +952,34 @@ async function renderBrief(root) {
         <div class="tele-line-spoken">${esc((discovery.questions || [""])[0])}</div>
         ${isES && discovery.questions_en?.[0] ? `
           <div class="tele-line-en"><span class="tele-en-tag">EN</span>${esc(discovery.questions_en[0])}</div>` : ""}
-        <div class="tele-direction">${isES ? "(deje que respondan · no presente todavía)" : "(let them answer · don't pitch yet)"}</div>
+        <div class="tele-direction">${isES ? "(escuche · su respuesta determina la rama)" : "(listen · their answer picks the branch below)"}</div>
 
-        <div class="tele-stage">${isES ? "▸ DESPUÉS PRESENTE:" : "▸ THEN PITCH:"}</div>
-        <div class="tele-line-spoken">${esc(pitch.say || "")}</div>
-        ${isES && pitch.say_en ? `
-          <div class="tele-line-en"><span class="tele-en-tag">EN</span>${esc(pitch.say_en)}</div>` : ""}
+        <div class="tele-stage">${isES ? "▸ DESPUÉS PRESENTE — ELIJA UNA RAMA:" : "▸ THEN PITCH — PICK THE BRANCH:"}</div>
+        <div class="tele-pushback">
+          ${pitchBranches.map(br => `
+            <div class="tele-exchange">
+              <div class="tele-they-say">
+                <span class="tele-tag tele-tag-they">${isES ? "Si dicen:" : "If they say:"}</span>
+                <span>${esc(br.if_they_say || "")}</span>
+              </div>
+              ${isES && br.if_they_say_en ? `
+                <div class="tele-line-en tele-line-en-indent"><span class="tele-en-tag">EN</span>${esc(br.if_they_say_en)}</div>` : ""}
+              <div class="tele-you-say">
+                <span class="tele-tag tele-tag-you">${isES ? "Diga:" : "You say:"}</span>
+                <span>${esc(br.you_say || "")}</span>
+              </div>
+              ${isES && br.you_say_en ? `
+                <div class="tele-line-en tele-line-en-indent"><span class="tele-en-tag">EN</span>${esc(br.you_say_en)}</div>` : ""}
+            </div>`).join("")}
+        </div>
+
+        ${customerDisco.questions?.[0] ? `
+          <div class="tele-stage">${isES ? "▸ DESPUÉS PREGUNTE:" : "▸ THEN ASK:"}</div>
+          <div class="tele-line-spoken">${esc(customerDisco.questions[0])}</div>
+          ${isES && customerDisco.questions_en?.[0] ? `
+            <div class="tele-line-en"><span class="tele-en-tag">EN</span>${esc(customerDisco.questions_en[0])}</div>` : ""}
+          <div class="tele-direction">${isES ? "(casi siempre dicen no — esa es la apertura para cerrar)" : "(they'll usually say no — that's the opening for the close)"}</div>
+        ` : ""}
 
         <div class="tele-stage">${isES ? "▸ SI EMPUJAN ATRÁS:" : "▸ IF THEY PUSH BACK:"}</div>
         <div class="tele-pushback">
