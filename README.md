@@ -219,12 +219,12 @@ Two hardcoded users with cookie-based sessions: `rep_sarah` and `mgr_maria`. The
 
 ## Next steps
 
-A few features I'd add next, in order of impact:
+A few things I'd add next:
 
-- Real ElevenLabs audio for similar wins.** Right now the "hear similar wins" button plays TTS of a transcript. Real won-call audio (with consent + redaction) would land harder — reps trust patterns they can hear in someone's voice, not synthetic narration. Plus rep-voice cloning so "here's how Sarah opened a similar deal" actually sounds like Sarah.
+- ** Real auth + RBACs: Right now login is a hardcoded cookie (`rep_sarah` / `mgr_maria`) — fine for a demo, not for a pilot. The right v2 is Google Workspace SSO with per-role permissions: reps see only their own queue and stats, managers see their direct reports' calls, admins manage the team roster. The role check already exists in `require_role()` — it just needs real identity behind it.
 
-- ** Disposition feedback loop.** Every brief view should emit a `brief_used` event tied to the call's eventual outcome (booked / not booked). Patterns that correlate with brief usage + booking get reinforced in the next synthesis run; patterns that don't get decayed. Right now patterns are extracted once and never validated against whether they actually drove wins — closing this loop turns the system from "AI-generated suggestions" into "evidence-weighted plays."
+- ** Real audio for similar wins: Right now "hear similar wins" plays ElevenLabs TTS of a transcript. Real won-call audio (with consent + redaction) would land harder — reps trust patterns they can hear in someone's voice, not synthetic narration. Bonus: rep-voice cloning so "here's how Sarah opened a similar deal" actually sounds like Sarah.
 
-- ** Pattern provenance UI.** Click any pattern → modal showing the contributing call IDs, the extracted opener_quote from each, the outcome. Reps trust patterns they can verify. The data is already in `evidence_call_ids` on every pattern; just needs a click handler and a modal.
+- ** UI polish The dark-mode works but a few things would tighten it: smoother loading transitions on the manager dashboard (right now it pops in), better empty states across the board, mobile responsiveness for the rep teleprompter (works but isn't optimized), and a proper onboarding tour for first-time users.
 
-- ** Per-call AI-generated objection responses.** Right now objections are templated string interpolation. With one Claude Haiku call per brief (~2s, ~$0.01) we could regenerate each response tuned to *this prospect's* specific signals — their cuisine, their platform mix, their stated concerns from the touch history. Cache per-restaurant. Trigger as a "regenerate this brief" button so the templated version still loads instantly and the LLM-generated one swaps in when ready.
+- Per-call AI-generated objections: Right now objections are templated string interpolation. With one Claude Haiku call per brief (~2s, ~$0.01) we could regenerate each response tuned to *this prospect's* specific signals. Cache per-restaurant. Trigger as a "regenerate this brief" button so the templated version still loads instantly and the LLM version swaps in when ready.
