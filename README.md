@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🍕 Owner.com Sales Intelligence
+# Owner.com Sales Intelligence Technical Assessment
 
 **A two-view sales platform that turns call transcripts into rep playbooks and manager coaching.**
 
