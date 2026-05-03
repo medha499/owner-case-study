@@ -1,6 +1,6 @@
 <div align="center">
 
-# Owner.com Sales Intelligence Technical Assessment
+# Owner.com Sales Intelligence Tech Case Study
 
 **A two-view sales platform that turns call transcripts into rep playbooks and manager coaching.**
 
@@ -20,9 +20,9 @@
 
 ---
 
-## ⚠️ A note on the data
+## A note on the data
 
-The CSVs are **not committed to this repo and the repo ships with a small synthetic seed dataset so the app runs end-to-end without redistributing their data. To run against the real dataset, drop the original `restaurants.csv` and `calls.csv` into `data/csv/` locally and the app picks them up — `_fields.py` handles common column-name variants, so no code changes are needed.
+The CSVs Owner.com sent for evaluation are **not committed to this repo.** To run against the real dataset, drop the original `restaurants.csv` and `calls.csv` into `data/` locally and the app picks them up.
 
 ---
 
@@ -44,7 +44,7 @@ Each line is personalized using the prospect's restaurant data and Tavily-enrich
 
 🌐 **Bilingual mode** — Spanish lines for the rep to speak with English translations underneath, so they always know what they're saying.
 
-🎧 **"Hear similar wins"** — ElevenLabs TTS of past won calls, prioritized by cuisine match.
+**"Hear similar wins"** — ElevenLabs TTS of past won calls, prioritized by cuisine match(NOT IMPLEMENTED)
 
 ### Manager view — pattern extraction across the team
 
@@ -113,7 +113,7 @@ Each line is personalized using the prospect's restaurant data and Tavily-enrich
 
 ---
 
-## ⚡ Performance
+## Performance
 
 Sub-15ms hot paths after the initial pipeline run.
 
@@ -129,37 +129,42 @@ How that's achieved: gzip middleware (84% size reduction), browser cache headers
 
 ## Run it
 
+**1. Clone and install**
+
 ```bash
-cd owner_app
+git clone https://github.com/<your-username>/owner-sales-intel.git
+cd owner-sales-intel
 pip install -r requirements.txt
+```
+
+**2. Set your API keys**
+
+```bash
 cp .env.example .env
-# put your ANTHROPIC_API_KEY, TAVILY_API_KEY, ELEVENLABS_API_KEY in .env
-# (all three optional — graceful fallbacks for demo without keys)
+```
+
+Then open `.env` and add:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...      # required — powers extraction + synthesis
+TAVILY_API_KEY=tvly-...           # required — live web research for account intel
+ELEVENLABS_API_KEY=...            # optional — only used for "hear similar wins" audio playback
+```
+
+**3. Drop in the dataset**
+
+Place `restaurants.csv` and `calls.csv` into `data/csv`
+
+**4. Run**
+
+```bash
 python server.py
 ```
 
 Visit http://localhost:8000 and pick:
 
-- 🎙 **Sales Rep** (Sarah Kim, `rep_sarah`)
-- 📊 **Sales Manager** (Maria Lopez, `mgr_maria`)
-
-To run against the real evaluation dataset: drop the original `restaurants.csv` and `calls.csv` into `data/csv/` and restart. The app picks them up automatically.
-
----
-
-## CSV schema
-
-```
-data/restaurants.csv
-  restaurant_id, name, city, state, cuisine_type, business_type,
-  website_url, num_locations
-
-data/calls.csv
-  call_id, transcript, call_duration_min, call_outcome, rep_id,
-  rep_tenure, cuisine_type, restaurant_type, num_locations
-```
-
-A small synthetic seed dataset ships in `data/` so the app runs out-of-the-box. `_fields.py` handles common column-name variants. Optional fields not in the CSV (`rating`, `est_commission_spend`, `ordering_setup`, `owner_name`) are filled from Tavily web research when keys are present, or from sensible cuisine-specific defaults otherwise.
+- **Sales Rep** (Sarah Kim, `rep_sarah`)
+- **Sales Manager** (Maria Lopez, `mgr_maria`)
 
 ---
 
@@ -199,7 +204,7 @@ owner_app/
 ├── data_csv.py              CSV loaders with in-memory cache
 ├── synthetic_signals.py     demo signal generator
 ├── tts.py                   ElevenLabs TTS
-├── data/csv                   seed CSVs (gitignored — drop real data here locally)
+├── data/csv                    seed CSVs (add real data here locally)
 ├── static/
 │   ├── login.html · app.html
 │   ├── style.css            dark mode (~3500 lines, 14KB gzipped)
