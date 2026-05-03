@@ -1,6 +1,6 @@
 <div align="center">
 
-# Owner.com Sales Intelligence
+# Owner.com Sales Intelligence Tech Case Study
 
 **Turning call transcripts into rep playbooks and manager coaching.**
 
