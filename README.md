@@ -107,20 +107,6 @@ Each line is personalized using the prospect's restaurant data and Tavily-enrich
 ```
 ---
 
-## Performance
-
-Sub-15ms hot paths after the initial pipeline run.
-
-| Path | Time |
-|---|---|
-| 🔍 Manager filter (any segment) | **6–9 ms** |
-| 📋 Rep brief load | **6–12 ms** |
-| 🌐 First pageload (gzipped) | **~33 KB wire** |
-
-How that's achieved: gzip middleware (84% size reduction), browser cache headers, hand-rolled CSS bars instead of Chart.js, slim API payloads, render-first / fetch-after, lazy Tavily on a separate endpoint, evidence-set intersection for filtering instead of LLM re-synthesis per click.
-
----
-
 ## Run it
 
 **1. Clone and install**
