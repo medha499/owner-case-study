@@ -53,8 +53,8 @@ Multi-agent layer
 **1. Clone and install**
 
 ```bash
-git clone https://github.com/<your-username>/owner-sales-intel.git
-cd owner-sales-intel
+git clone https://github.com/<your-username>/owner-case-study.git
+cd owner-case-study
 pip install -r requirements.txt
 ```
 
