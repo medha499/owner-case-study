@@ -362,250 +362,289 @@ def build_brief(restaurant, signals, segment_what_works, language="en"):
     }
 
 
+
+
 def _build_talk_track(restaurant, opener, voicemail, account_intel, segment_works, language="en"):
-    """Per-client talk track. Pulls every available signal and weaves it into spoken lines.
+    """Conversational talk track — hardcoded structure with per-restaurant detail
+    interpolated. Designed for cold calls to mom-and-pop restaurants where the
+    rep doesn't yet know the prospect's current ordering setup.
 
-    Customization sources:
-    - Restaurant: name, cuisine, city, state, num_locations, business_type
-    - Account intel (Tavily-enriched when available): top_menu_item, review_themes,
-      price_range, family_style, recent_news
-    - Computed: estimated commission spend (from cuisine + locations), primary platform,
-      annual loss, "amount you'd keep" estimate
+    Six stages:
+      1. Opener — intro Owner.com, ask permission
+      2. Discover setup — branch on what the prospect uses today
+      3. Pitch — three branches (DoorDash/UberEats user, phone-only, has-site-no-ordering)
+      4. Customer-data discovery — surface the data-ownership pain
+      5. Objections — five they-say/you-say pairs
+      6. Close — calendar-anchored ask
 
-    When language == 'es', every spoken line is returned with an `_en` translation
-    so the bilingual UI can show both. The rep speaks Spanish, but sees the English
-    translation right below so they know what they're saying.
+    When language='es', every spoken line is paired with an `_en` translation
+    so the bilingual UI shows both — rep speaks Spanish, sees English underneath.
     """
     is_es = language == "es"
 
-    # ---- Pull every available bit of context for this client ----
-    ci = (account_intel or {}).get("cuisine_intel") or {}
-    pi = (account_intel or {}).get("platform_intel") or {}
+    # ── Per-restaurant detail (interpolated into hardcoded scaffolding) ──
+    name = F.get_name(restaurant) or "your restaurant"
     cuisine_raw = F.get_cuisine(restaurant) or ""
     cuisine = cuisine_raw.lower() or "restaurant"
     cuisine_es = {"pizza":"pizzería","mexican":"mexicano","asian":"asiático",
                   "burgers":"hamburguesas","bbq":"BBQ","seafood":"mariscos",
                   "italian":"italiano","thai":"tailandés","japanese":"japonés"}.get(cuisine, cuisine)
-    name = F.get_name(restaurant) or "your restaurant"
-    city = F.get(restaurant, "city") or ""
     state = F.get_state(restaurant) or ""
     locs = F.get_locations(restaurant) or 1
-    biz = (F.get(restaurant, "business_type", "type") or "").lower()
     spend = F.get_commission_spend(restaurant) or 6000
-    annual_K = (spend * 12) // 1000
     keep_K = (spend * 12 * 2 // 3) // 1000
-    platforms = pi.get("platforms_detected", [])
-    primary_platform = platforms[0] if platforms else "DoorDash"
 
-    # Top menu item — strip generic placeholder text from fallback
-    top_item_raw = (ci.get("top_menu_item") or "").strip()
-    if top_item_raw and "Signature dish" not in top_item_raw and "—" not in top_item_raw[:8]:
-        top_item = top_item_raw.split("/")[0].split(",")[0].strip()  # take first item if list
-    else:
-        top_item = ""  # signal: no real data, fall back to generic phrasing
-
-    # Review themes — the things customers love about this place
-    review_themes = ci.get("review_themes") or []
-    primary_theme = review_themes[0] if review_themes else ""
-
-    # Multi-location framing: address the right pain
-    location_phrase_en = f"all {locs} locations" if locs > 1 else "your shop"
-    location_phrase_es = f"sus {locs} ubicaciones" if locs > 1 else "su local"
-
-    # Price range hint — informs how aggressive the dollar pitch should be
-    price_range = (ci.get("price_range") or "").strip()
-
-    # Recent news for proof-point or hook variation
-    recent_news = (ci.get("recent_news") or "").strip()
-    has_news = recent_news and "no recent news" not in recent_news.lower() and "no tavily" not in recent_news.lower()
-
-    # ---------------- 1. OPENER (the hook) ----------------
-    import re
-    opener_clean = re.sub(r"<[^>]+>", "", opener or "").strip()
-    if (opener_clean.startswith('"') and opener_clean.endswith('"')) or \
-       (opener_clean.startswith('"') and opener_clean.endswith('"')):
-        opener_clean = opener_clean[1:-1].strip()
-
-    # If we have a top item or review theme, build a more personalized opener
-    # to override the generic AI/fallback opener
-    custom_opener_en = None
-    custom_opener_es = None
-    if top_item:
-        custom_opener_en = (
-            f"Hi, this is calling from Owner.com. Quick reason for the call — "
-            f"I noticed {top_item} is one of the most-praised items in {name}'s reviews. "
-            f"Most {cuisine} spots like yours in {state} are paying around ${spend:,} a month "
-            f"to apps like {primary_platform}. Mind if I ask one question?"
-        )
-        custom_opener_es = (
-            f"Hola, le habla de Owner.com. La razón rápida — "
-            f"noté que {top_item} es uno de los platos más elogiados en las reseñas de {name}. "
-            f"La mayoría de los lugares {cuisine_es} como el suyo en {state} están pagando "
-            f"alrededor de ${spend:,} al mes a apps como {primary_platform}. "
-            f"¿Le importa si le pregunto algo?"
-        )
-    elif primary_theme:
-        custom_opener_en = (
-            f"Hi, calling from Owner.com. Quick reason — your customers rave about "
-            f"{primary_theme} in {name}'s reviews, but most {cuisine} spots in {state} "
-            f"are losing about ${spend:,} a month to delivery apps. Got 60 seconds?"
-        )
-        custom_opener_es = (
-            f"Hola, le llamo de Owner.com. La razón rápida — sus clientes elogian "
-            f"{primary_theme} en las reseñas de {name}, pero la mayoría de los {cuisine_es} "
-            f"en {state} pierden unos ${spend:,} al mes a apps de entrega. ¿60 segundos?"
-        )
-
-    if is_es:
-        opener_en = custom_opener_en or opener_clean
-        opener_say = custom_opener_es or opener_clean
-    else:
-        opener_say = custom_opener_en or opener_clean
-        opener_en = None
-
+    # ════════════════════════════════════════════════════════════════════
+    # 1. OPENER — introduce Owner.com, ask permission
+    # ════════════════════════════════════════════════════════════════════
+    opener_en = (
+        f"Hi, this is [your_name] calling from Owner.com. We work with independent "
+        f"restaurants like yours across the country to help you take orders "
+        f"directly from your customers — without paying DoorDash or Uber Eats "
+        f"their commissions. Do you have 60 seconds?"
+    )
+    opener_es = (
+        f"Hola, le habla de Owner.com. Trabajamos con restaurantes independientes "
+        f"como el suyo en todo el país para ayudarles a tomar pedidos directamente "
+        f"de sus clientes — sin pagar comisiones a DoorDash o Uber Eats. "
+        f"¿Tiene 60 segundos?"
+    )
     step_opener = {
         "step": 1,
         "label": "Opener" if not is_es else "Apertura",
         "icon": "▶",
         "duration_sec": 15,
-        "instruction": ("Pause after the question. Don't fill silence."
-                        if not is_es else "Pause después de la pregunta. No llene el silencio."),
-        "say": opener_say,
-        "say_en": opener_en,  # English translation when in ES mode
+        "instruction": ("Pause. Wait for them to say yes."
+                        if not is_es else "Pause. Espere a que digan sí."),
+        "say": opener_es if is_es else opener_en,
+        "say_en": opener_en if is_es else None,
     }
 
-    # ---------------- 2. ASK ONE QUESTION ----------------
-    # Only one question shown. Pick the most pointed one given what we know.
-    if top_item:
-        q_en = (f"What % of {top_item} orders are coming through {primary_platform} "
-                f"versus straight from your own customers?")
-        q_es = (f"¿Qué % de los pedidos de {top_item} llegan por {primary_platform} "
-                f"versus directo de sus propios clientes?")
-    elif locs > 1:
-        q_en = (f"Across your {locs} locations, what % of last week's orders came "
-                f"through {primary_platform} or Uber Eats?")
-        q_es = (f"En sus {locs} ubicaciones, ¿qué % de los pedidos de la semana pasada "
-                f"llegaron por {primary_platform} o Uber Eats?")
-    else:
-        q_en = f"What % of last week's orders came through {primary_platform} or Uber Eats?"
-        q_es = f"¿Qué % de los pedidos de la semana pasada llegaron por {primary_platform} o Uber Eats?"
-
-    discovery_say = q_es if is_es else q_en
-    discovery_en = q_en if is_es else None
-
+    # ════════════════════════════════════════════════════════════════════
+    # 2. DISCOVER SETUP — single question that triggers the branch
+    # ════════════════════════════════════════════════════════════════════
+    setup_q_en = (
+        f"Quick question — when someone wants to place an order from {name} "
+        f"today, how does that usually happen? Do they call you, order through "
+        f"DoorDash or Uber Eats, or do you have your own website?"
+    )
+    setup_q_es = (
+        f"Pregunta rápida — cuando alguien quiere hacer un pedido de {name} hoy, "
+        f"¿cómo sucede normalmente? ¿Le llaman, piden por DoorDash o Uber Eats, "
+        f"o tienen su propio sitio web?"
+    )
     step_discovery = {
         "step": 2,
-        "label": "Discovery" if not is_es else "Descubrimiento",
+        "label": "Discover their setup" if not is_es else "Descubrir su sistema",
         "icon": "?",
         "duration_sec": 30,
-        "instruction": ("Ask. Shut up. Wait for their number."
-                        if not is_es else "Pregunte. Cállese. Espere su número."),
-        "questions": [discovery_say],
-        "questions_en": [discovery_en] if discovery_en else None,
+        "instruction": ("Ask. Listen. Their answer tells you which pitch branch to use."
+                        if not is_es else "Pregunte. Escuche. Su respuesta le dice qué rama usar."),
+        "questions": [setup_q_es if is_es else setup_q_en],
+        "questions_en": [setup_q_en] if is_es else None,
     }
 
-    # ---------------- 3. PITCH ----------------
-    # Lead with their dollars, mention what makes them special, then the proof.
-    customer_hook_en = ""
-    customer_hook_es = ""
-    if top_item:
-        customer_hook_en = f"You've already got people loving {top_item} — "
-        customer_hook_es = f"Ya tiene gente que ama {top_item} — "
-    elif primary_theme:
-        customer_hook_en = f"Your customers already love your {primary_theme} — "
-        customer_hook_es = f"Sus clientes ya aman su {primary_theme} — "
-
-    cuisine_owner_en = f"{cuisine} owners" if cuisine != "restaurant" else "restaurant owners"
-    cuisine_owner_es = f"dueños de {cuisine_es}" if cuisine_es != "restaurant" else "dueños de restaurantes"
-
-    pitch_en = (
-        f"Here's the thing — at ${spend:,} a month to {primary_platform}, "
-        f"that's about ${annual_K},000 a year leaving {name}. "
-        f"{customer_hook_en}we replace those app fees with direct ordering on "
-        f"your own website. Same orders, no commission, and you finally see "
-        f"who your customers actually are. Most {cuisine_owner_en} we work with "
-        f"see 3 to 5 times their money back within 90 days."
-    )
-    pitch_es = (
-        f"Mire — a ${spend:,} al mes a {primary_platform}, son unos ${annual_K},000 "
-        f"al año saliendo de {name}. "
-        f"{customer_hook_es}reemplazamos esas comisiones con pedidos directos en su "
-        f"propio sitio web. Los mismos pedidos, sin comisión, y por fin ve quiénes "
-        f"son sus clientes. La mayoría de {cuisine_owner_es} con quien trabajamos "
-        f"ven 3 a 5 veces su dinero de regreso en 90 días."
-    )
-    pitch_say = pitch_es if is_es else pitch_en
-    pitch_en_for_ui = pitch_en if is_es else None
+    # ════════════════════════════════════════════════════════════════════
+    # 3. PITCH — branched based on their answer
+    # ════════════════════════════════════════════════════════════════════
+    pitch_branches_en = [
+        {
+            "if_they_say": "They use DoorDash, Uber Eats, or another delivery app",
+            "you_say": (
+                f"Got it. So you're probably paying somewhere around "
+                f"${spend:,} a month in commissions — that's about ${(spend*12)//1000},000 "
+                f"a year. We replace that with your own ordering page. Same orders, "
+                f"no commission, and you finally see who your customers are. Most "
+                f"{cuisine} owners we work with see 3 to 5 times their money back "
+                f"in the first 90 days."
+            ),
+        },
+        {
+            "if_they_say": "They take phone orders only / no online ordering",
+            "you_say": (
+                f"Makes sense. Here's the thing — your customers want to order from "
+                f"their phone at 9pm on a Saturday without calling you. What we do "
+                f"is set {name} up with your own ordering page and a branded app, "
+                f"so they order direct from you instead of going to DoorDash. Takes "
+                f"about 7 days to set up, and most owners see new revenue from "
+                f"customers who would've never called in the first place."
+            ),
+        },
+        {
+            "if_they_say": "They have a website but no online ordering on it",
+            "you_say": (
+                f"Perfect — so you've got the brand piece. What's missing is "
+                f"actually capturing orders through it. We bolt online ordering "
+                f"right onto your existing site, so customers don't have to leave "
+                f"your page. You keep 100% of every order, and you own the "
+                f"customer relationship — not DoorDash."
+            ),
+        },
+    ]
+    pitch_branches_es = [
+        {
+            "if_they_say": "Usan DoorDash, Uber Eats u otra app de entrega",
+            "you_say": (
+                f"Entendido. Entonces probablemente está pagando alrededor de "
+                f"${spend:,} al mes en comisiones — son unos ${(spend*12)//1000},000 "
+                f"al año. Lo reemplazamos con su propia página de pedidos. Los mismos "
+                f"pedidos, sin comisión, y por fin ve quiénes son sus clientes. La "
+                f"mayoría de dueños de {cuisine_es} con quien trabajamos ven 3 a 5 "
+                f"veces su dinero de regreso en los primeros 90 días."
+            ),
+        },
+        {
+            "if_they_say": "Solo toman pedidos por teléfono / sin pedidos en línea",
+            "you_say": (
+                f"Tiene sentido. Mire — sus clientes quieren pedir desde el teléfono "
+                f"a las 9pm un sábado sin llamarle. Lo que hacemos es montar a {name} "
+                f"con su propia página de pedidos y una app de marca, para que pidan "
+                f"directo a usted en vez de ir a DoorDash. Toma unos 7 días instalarlo, "
+                f"y la mayoría de dueños ven ingresos nuevos de clientes que no "
+                f"hubieran llamado en primer lugar."
+            ),
+        },
+        {
+            "if_they_say": "Tienen sitio web pero sin pedidos en línea",
+            "you_say": (
+                f"Perfecto — entonces ya tiene la marca. Lo que falta es realmente "
+                f"capturar pedidos a través del sitio. Atornillamos los pedidos en "
+                f"línea directo a su sitio existente, así los clientes no tienen "
+                f"que salir de su página. Se queda con el 100% de cada pedido, y "
+                f"es dueño de la relación con el cliente — no DoorDash."
+            ),
+        },
+    ]
+    if is_es:
+        pitch_branches = []
+        for es, en in zip(pitch_branches_es, pitch_branches_en):
+            pitch_branches.append({
+                "if_they_say": es["if_they_say"],
+                "if_they_say_en": en["if_they_say"],
+                "you_say": es["you_say"],
+                "you_say_en": en["you_say"],
+            })
+    else:
+        pitch_branches = pitch_branches_en
 
     step_pitch = {
         "step": 3,
-        "label": "The pitch" if not is_es else "La presentación",
+        "label": "Pitch (pick the branch)" if not is_es else "Presente (elija la rama)",
         "icon": "$",
         "duration_sec": 45,
-        "instruction": ("Read slowly. Pause after the dollar number."
-                        if not is_es else "Léalo despacio. Pause después del monto."),
-        "say": pitch_say,
-        "say_en": pitch_en_for_ui,
+        "instruction": ("Pick the branch that matches what they just told you."
+                        if not is_es else "Elija la rama que coincida con lo que le dijeron."),
+        "branches": pitch_branches,
+        # Legacy 'say' fallback for any older renderer that expects flat text:
+        "say": (pitch_branches_en[0]["you_say"] if not is_es else pitch_branches_es[0]["you_say"]),
     }
 
-    # ---------------- 4. OBJECTIONS ----------------
-    # Customized per restaurant. References their actual platform, spend, and item.
+    # ════════════════════════════════════════════════════════════════════
+    # 4. CUSTOMER-DATA DISCOVERY — surface the data-ownership pain
+    # ════════════════════════════════════════════════════════════════════
+    customer_q_en = (
+        f"And right now, do you have any way to remember who your repeat "
+        f"customers are — names, phone numbers, what they usually order?"
+    )
+    customer_q_es = (
+        f"Y ahora mismo, ¿tiene alguna manera de recordar quiénes son sus "
+        f"clientes recurrentes — nombres, teléfonos, qué suelen pedir?"
+    )
+    step_customer_disco = {
+        "step": 4,
+        "label": "Customer data" if not is_es else "Datos del cliente",
+        "icon": "?",
+        "duration_sec": 20,
+        "instruction": ("They'll usually say no. That's the opening for the close."
+                        if not is_es else "Casi siempre dicen no. Esa es la apertura para cerrar."),
+        "questions": [customer_q_es if is_es else customer_q_en],
+        "questions_en": [customer_q_en] if is_es else None,
+    }
+
+    # ════════════════════════════════════════════════════════════════════
+    # 5. OBJECTIONS — five they-say / you-say pairs
+    # ════════════════════════════════════════════════════════════════════
     raw_objections_en = [
         {
             "they_say": "It sounds expensive.",
-            "you_say": (f"Compared to what — your ${spend:,} a month {primary_platform} bill, "
-                        f"or general budget? We're about a third of that, and you keep the customers."),
+            "you_say": (
+                f"Compared to what — your DoorDash bill, or general budget? We're "
+                f"a fraction of what you're paying in commissions, and you keep "
+                f"the customers. Let me show you the math on a 20-minute call."
+            ),
         },
         {
-            "they_say": f"But {primary_platform} brings me customers.",
-            "you_say": (f"When you log into {primary_platform}, can you see those customers' "
-                        f"names and phone numbers? You're paying for traffic that walks away."
-                        + (f" Even the people who came back for {top_item}." if top_item else "")),
+            "they_say": "I don't have time to learn a new system.",
+            "you_say": (
+                f"You don't have to. We migrate your menu for you, set everything "
+                f"up, and train your staff. Most owners are up and running in 7 to "
+                f"10 days with about an hour of their time total."
+            ),
         },
         {
-            "they_say": "I'm too busy right now.",
-            "you_say": (f"Every month waiting is another ${spend:,} gone. We migrate "
-                        f"{'all your menus across ' + str(locs) + ' locations' if locs > 1 else 'your menu'} "
-                        f"for you, run both systems in parallel — you're live in 7 to 10 days."),
+            "they_say": "DoorDash brings me customers I wouldn't otherwise reach.",
+            "you_say": (
+                f"That's their pitch. But when you log into DoorDash, can you see "
+                f"those customers' names and phone numbers? You're paying for "
+                f"traffic that walks away — we make that traffic yours."
+            ),
         },
         {
-            "they_say": "I need to talk to my partner.",
-            "you_say": ("Smart — bring them on the call with us. Both of you see the same "
-                        "numbers at the same time. What time works for both of you this week?"),
+            "they_say": "I need to talk to my partner / spouse / family.",
+            "you_say": (
+                f"Smart — bring them on the call with us. Both of you see the same "
+                f"numbers at the same time. What time works for both of you this week?"
+            ),
         },
         {
             "they_say": "Just send me some info.",
-            "you_say": (f"Happy to — but info won't show you what ${keep_K},000 back in your "
-                        f"business actually looks like. Let me show you on a 20-minute call."),
+            "you_say": (
+                f"Happy to — but info won't show you what an extra ${keep_K},000 "
+                f"a year back in {name} actually looks like. Let me show you on "
+                f"a 20-minute call."
+            ),
         },
     ]
     raw_objections_es = [
         {
             "they_say": "Suena caro.",
-            "you_say": (f"¿Comparado con qué — su factura de ${spend:,} al mes a {primary_platform}, "
-                        f"o presupuesto general? Somos como un tercio de eso, y se queda con los clientes."),
+            "you_say": (
+                f"¿Comparado con qué — su factura de DoorDash, o presupuesto general? "
+                f"Somos una fracción de lo que paga en comisiones, y se queda con "
+                f"los clientes. Déjeme mostrarle las matemáticas en 20 minutos."
+            ),
         },
         {
-            "they_say": f"Pero {primary_platform} me trae clientes.",
-            "you_say": (f"Cuando entra a {primary_platform}, ¿puede ver los nombres y teléfonos "
-                        f"de esos clientes? Está pagando por tráfico que se va."
-                        + (f" Hasta la gente que volvió por {top_item}." if top_item else "")),
+            "they_say": "No tengo tiempo para aprender un sistema nuevo.",
+            "you_say": (
+                f"No tiene que hacerlo. Nosotros migramos su menú, instalamos todo, "
+                f"y capacitamos a su personal. La mayoría de dueños está funcionando "
+                f"en 7 a 10 días con menos de una hora de su tiempo en total."
+            ),
         },
         {
-            "they_say": "Estoy muy ocupado ahora.",
-            "you_say": (f"Cada mes que espera son otros ${spend:,} perdidos. Nosotros migramos "
-                        f"{'todos los menús de sus ' + str(locs) + ' ubicaciones' if locs > 1 else 'su menú'}, "
-                        f"corremos ambos sistemas en paralelo — está en vivo en 7 a 10 días."),
+            "they_say": "DoorDash me trae clientes que no alcanzaría.",
+            "you_say": (
+                f"Esa es su frase de venta. Pero cuando entra a DoorDash, ¿puede "
+                f"ver nombres y teléfonos de esos clientes? Está pagando por "
+                f"tráfico que se va — nosotros hacemos ese tráfico suyo."
+            ),
         },
         {
-            "they_say": "Tengo que hablar con mi socio.",
-            "you_say": ("Inteligente — tráigalo a la llamada con nosotros. Los dos ven los mismos "
-                        "números a la vez. ¿Qué hora les sirve a ambos esta semana?"),
+            "they_say": "Tengo que hablar con mi socio / esposa / familia.",
+            "you_say": (
+                f"Inteligente — tráigalos a la llamada con nosotros. Los dos ven "
+                f"los mismos números al mismo tiempo. ¿Qué hora les sirve a ambos "
+                f"esta semana?"
+            ),
         },
         {
             "they_say": "Solo mándeme info.",
-            "you_say": (f"Con gusto — pero la info no le muestra lo que ${keep_K},000 de regreso en su "
-                        f"negocio se ve. Déjeme mostrárselo en una llamada de 20 minutos."),
+            "you_say": (
+                f"Con gusto — pero la info no le muestra cómo se ven ${keep_K},000 "
+                f"extra al año de regreso en {name}. Déjeme mostrárselo en una "
+                f"llamada de 20 minutos."
+            ),
         },
     ]
     if is_es:
@@ -621,7 +660,7 @@ def _build_talk_track(restaurant, opener, voicemail, account_intel, segment_work
         objections = raw_objections_en
 
     step_objections = {
-        "step": 4,
+        "step": 5,
         "label": "Objections" if not is_es else "Objeciones",
         "icon": "✕",
         "duration_sec": 60,
@@ -630,14 +669,20 @@ def _build_talk_track(restaurant, opener, voicemail, account_intel, segment_work
         "objections": objections,
     }
 
-    # ---------------- 5. CLOSE ----------------
-    close_en = (f"Tuesday at 2pm or Wednesday at 10am for a 20-minute screen-share — "
-                f"which works better?")
-    close_es = (f"¿Martes a las 2pm o miércoles a las 10am para una llamada de 20 minutos — "
-                f"cuál le sirve mejor?")
+    # ════════════════════════════════════════════════════════════════════
+    # 6. CLOSE — calendar-anchored
+    # ════════════════════════════════════════════════════════════════════
+    close_en = (
+        f"Tuesday at 2pm or Wednesday at 10am for a quick 20-minute walkthrough — "
+        f"which works better?"
+    )
+    close_es = (
+        f"¿Martes a las 2pm o miércoles a las 10am para un recorrido rápido de "
+        f"20 minutos — cuál le sirve mejor?"
+    )
     step_close = {
-        "step": 5,
-        "label": "The close" if not is_es else "El cierre",
+        "step": 6,
+        "label": "Close" if not is_es else "Cierre",
         "icon": "✓",
         "duration_sec": 25,
         "instruction": ("Wait. Let them pick. Don't fill the silence."
@@ -646,4 +691,4 @@ def _build_talk_track(restaurant, opener, voicemail, account_intel, segment_work
         "say_en": close_en if is_es else None,
     }
 
-    return [step_opener, step_discovery, step_pitch, step_objections, step_close]
+    return [step_opener, step_discovery, step_pitch, step_customer_disco, step_objections, step_close]
