@@ -19,7 +19,7 @@
 
 ## A note on the data
 
-The CSVs Owner.com sent for evaluation are **not committed to this repo.** To run against the real dataset, drop the original `restaurants.csv` and `calls.csv` into `data/` locally and the app picks them up.
+The csvs/data files are **not committed to this repo.** To run against the real dataset, drop the original `restaurants.csv` and `calls.csv` into `data/` locally and the app picks them up.
 
 ---
 
