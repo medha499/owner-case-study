@@ -50,32 +50,55 @@ Multi-agent layer
 
 ## Run it
 
+**1. Clone and install**
+
 ```bash
-git clone https://github.com/<your-username>/owner-case-study.git
-cd owner-case-study
+git clone https://github.com/<your-username>/owner-sales-intel.git
+cd owner-sales-intel
 pip install -r requirements.txt
-nano .env
 ```
 
-Add your keys to `.env`:
+> **If `pandas` fails to install** (common on newerpPython versions), install the libraries individually instead:
+>
+> ```bash
+> pip install fastapi uvicorn anthropic tavily-python python-dotenv elevenlabs
+> pip install pandas    # try a fresh install on its own; if it still fails, try `pip install pandas --pre` or upgrade pip first
+> ```
+>
+> Everything else in `requirements.txt` is a small, fast install — pandas is the only one that occasionally needs special handling.
 
-```
-ANTHROPIC_API_KEY=sk-ant-...   # required — extraction + synthesis
-TAVILY_API_KEY=tvly-...        # required — live web research
-ELEVENLABS_API_KEY=...         # optional — TTS for "hear similar wins"
+**2. Set your API keys**
+
+Create a `.env` file in the project root by copying the example:
+
+```bash
+# macOS / Linux
+touch .env
+# or just open/create .env in your editor
 ```
 
-Drop `restaurants.csv` and `calls.csv` into `data/csv/`, then:
+Then open `.env` (e.g. `nano .env`, or your editor of choice) and add:
+```
+ANTHROPIC_API_KEY=sk-ant-...      # required — powers extraction + synthesis
+TAVILY_API_KEY=tvly-...           # required — live web research for account intel
+ELEVENLABS_API_KEY=...            # optional — only used for "hear similar wins" audio playback
+```
+> **Note on data:** the CSVs are not committed. Drop the original `restaurants.csv` and `calls.csv` into `data/csv/` to run against the real dataset.
+
+**3. Drop in the dataset**
+
+Place `restaurants.csv` and `calls.csv` into `data/`. The app picks them up automatically — `_fields.py` handles common column-name variants so no code changes are needed.
+
+**4. Run**
 
 ```bash
 python server.py
 ```
 
-Visit `http://localhost:8000` and log in as:
-- **Sales Rep** — Sarah Kim (`rep_sarah`)
-- **Sales Manager** — Maria Lopez (`mgr_maria`)
+Visit http://localhost:8000 and pick:
 
-> **Note on data:** the CSVs are not committed. Drop the original `restaurants.csv` and `calls.csv` into `data/csv/` to run against the real dataset.
+- 🎙 **Sales Rep** (Sarah Kim, `rep_sarah`)
+- 📊 **Sales Manager** (Maria Lopez, `mgr_maria`)
 
 ## API
 
