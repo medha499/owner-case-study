@@ -12,9 +12,8 @@
 ![Bilingual](https://img.shields.io/badge/lang-EN%20%2B%20ES-facc15)
 ![No build step](https://img.shields.io/badge/frontend-vanilla%20JS-yellow)
 
-🎯 **Reps** get a single-screen call script personalized to each prospect.
-📊 **Managers** get pattern extraction across the team's calls — what's actually closing deals, sliced by segment.
-⚡ **Sub-15ms** hot paths end-to-end.
+**Reps** get a single-screen call script personalized to each prospect.
+**Managers** get pattern extraction across the team's calls — what's actually closing deals, sliced by segment.
 
 </div>
 
