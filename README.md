@@ -221,10 +221,9 @@ Two hardcoded users with cookie-based sessions: `rep_sarah` and `mgr_maria`. The
 
 A few things I'd add next:
 
-- ** Real auth + RBACs: Right now login is a hardcoded cookie (`rep_sarah` / `mgr_maria`) — fine for a demo, not for a pilot. The right v2 is Google Workspace SSO with per-role permissions: reps see only their own queue and stats, managers see their direct reports' calls, admins manage the team roster. The role check already exists in `require_role()` — it just needs real identity behind it.
+- Real auth + RBACs: Right now login is a hardcoded cookie (`rep_sarah` / `mgr_maria`) — fine for a demo, not for a pilot. The right v2 is Google Workspace SSO with per-role permissions: reps see only their own queue and stats, managers see their direct reports' calls, admins manage the team roster. The role check already exists in `require_role()` — it just needs real identity behind it.
 
-- ** Real audio for similar wins: Right now "hear similar wins" plays ElevenLabs TTS of a transcript. Real won-call audio (with consent + redaction) would land harder — reps trust patterns they can hear in someone's voice, not synthetic narration. Bonus: rep-voice cloning so "here's how Sarah opened a similar deal" actually sounds like Sarah.
+- Real audio for similar wins: Right now "hear similar wins" plays ElevenLabs TTS of a transcript. Real won-call audio (with consent + redaction) would land harder — reps trust patterns they can hear in someone's voice, not synthetic narration. Bonus: rep-voice cloning so "here's how Sarah opened a similar deal" actually sounds like Sarah.
 
-- ** UI polish The dark-mode works but a few things would tighten it: smoother loading transitions on the manager dashboard (right now it pops in), better empty states across the board, mobile responsiveness for the rep teleprompter (works but isn't optimized), and a proper onboarding tour for first-time users.
+- UI polish The dark-mode works but a few things would tighten it: smoother loading transitions on the manager dashboard (right now it pops in), better empty states across the board, mobile responsiveness for the rep teleprompter (works but isn't optimized), and a proper onboarding tour for first-time users.
 
-- Per-call AI-generated objections: Right now objections are templated string interpolation. With one Claude Haiku call per brief (~2s, ~$0.01) we could regenerate each response tuned to *this prospect's* specific signals. Cache per-restaurant. Trigger as a "regenerate this brief" button so the templated version still loads instantly and the LLM version swaps in when ready.
