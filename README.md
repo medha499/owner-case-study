@@ -22,13 +22,13 @@
 
 ## ⚠️ A note on the data
 
-The CSVs Owner.com sent for evaluation are **not committed to this repo**. `data/*.csv` is in `.gitignore` and the repo ships with a small synthetic seed dataset so the app runs end-to-end without redistributing their data. To run against the real dataset, drop the original `restaurants.csv` and `calls.csv` into `data/` locally and the app picks them up — `_fields.py` handles common column-name variants, so no code changes are needed.
+The CSVs are **not committed to this repo and the repo ships with a small synthetic seed dataset so the app runs end-to-end without redistributing their data. To run against the real dataset, drop the original `restaurants.csv` and `calls.csv` into `data/csv/` locally and the app picks them up — `_fields.py` handles common column-name variants, so no code changes are needed.
 
 ---
 
 ## What it does
 
-### 🎙 Rep view — a screenplay-style script
+### Rep view — a screenplay-style script
 
 Single-screen teleprompter the rep reads top-to-bottom during the call. Five stages with the exact words to say:
 
@@ -46,7 +46,7 @@ Each line is personalized using the prospect's restaurant data and Tavily-enrich
 
 🎧 **"Hear similar wins"** — ElevenLabs TTS of past won calls, prioritized by cuisine match.
 
-### 📊 Manager view — pattern extraction across the team
+### Manager view — pattern extraction across the team
 
 - **Themes & Topics** — aggregated What Works / What Doesn't patterns plus 4 inline mini-charts (opener × outcome, language mix, top objections, competitor mentions)
 - **Slice & Dice** — same patterns, filterable by cuisine, business type, locations. Filters apply in <10ms because they intersect pre-computed evidence rather than re-running LLMs
@@ -55,7 +55,7 @@ Each line is personalized using the prospect's restaurant data and Tavily-enrich
 
 ---
 
-## 🏗 Architecture
+## Architecture
 
 ```
                  ┌──────────────────────────────────────────┐
@@ -127,7 +127,7 @@ How that's achieved: gzip middleware (84% size reduction), browser cache headers
 
 ---
 
-## 🚀 Run it
+## Run it
 
 ```bash
 cd owner_app
@@ -147,7 +147,7 @@ To run against the real evaluation dataset: drop the original `restaurants.csv` 
 
 ---
 
-## 📂 CSV schema
+## CSV schema
 
 ```
 data/restaurants.csv
@@ -163,7 +163,7 @@ A small synthetic seed dataset ships in `data/` so the app runs out-of-the-box. 
 
 ---
 
-## 🔌 API
+## API
 
 ```
 POST /api/login · /api/logout · GET /api/me
@@ -188,7 +188,7 @@ POST /api/notes/{id}/ack             (rep) acknowledge note
 
 ---
 
-## 📁 File layout
+## File layout
 
 ```
 owner_app/
@@ -210,13 +210,13 @@ owner_app/
 
 ---
 
-## 🔐 Auth (demo)
+## Auth (demo)
 
 Two hardcoded users with cookie-based sessions: `rep_sarah` and `mgr_maria`. The Manager/Rep toggle in the topbar flips views without re-login. This is demo-grade — real auth (OAuth + RBAC) is in next steps.
 
 ---
 
-## 🎯 Next steps
+## Next steps
 
 **Tier 1 — pilot-ready**
 - Salesforce / HubSpot bidirectional sync (lead pull → queue, disposition → CRM)
