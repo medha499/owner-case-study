@@ -107,9 +107,6 @@ Each line is personalized using the prospect's restaurant data and Tavily-enrich
                        │  data  │        │  web   │
                        └────────┘        └────────┘
 ```
-
-**Why multi-agent?** The problem decomposes naturally. Per-call extraction is parallel and uniform → Haiku at 8 workers. Cross-call synthesis is reasoning-heavy → Opus orchestrates. Per-account brief is web-grounded → Tavily fires lazily. Each sub-agent has a tight JSON contract so failures fall back gracefully instead of corrupting the whole response.
-
 ---
 
 ## Performance
