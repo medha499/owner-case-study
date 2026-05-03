@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-CSV_CALLS_PATH = os.getenv("CSV_CALLS_PATH", "data/calls.csv")
-CSV_RESTAURANTS_PATH = os.getenv("CSV_RESTAURANTS_PATH", "data/restaurants.csv")
+CSV_CALLS_PATH = os.getenv("CSV_CALLS_PATH")
+CSV_RESTAURANTS_PATH = os.getenv("CSV_RESTAURANTS_PATH")
 
 _cache = {}
 
