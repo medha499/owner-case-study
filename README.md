@@ -21,30 +21,9 @@ This case study builds a two-view tool that fixes both sides:
 - **Reps** get a personalized script for each prospect, before the call.
 - **Managers** get aggregated patterns across the team, plus per-rep coaching.
 
-## The two views
 
-### 🎯 Rep view — a teleprompter for the call
+<img width="1185" height="624" alt="outline" src="https://github.com/user-attachments/assets/9d98fa28-16f7-42ca-a232-8b962484daad" />
 
-A single screen the rep reads top-to-bottom. Five stages, exact words to say:
-
-| Stage | What it gives the rep |
-|---|---|
-| **Open** | Personalized hook (top dish, delivery platform, est. spend) |
-| **Ask** | One discovery question |
-| **Pitch** | Dollar math + value prop |
-| **Handle pushback** | Five They-Say / You-Say pairs |
-| **Close** | Calendar-anchored ask |
-
-Every line is personalized using the prospect's restaurant data plus live Tavily web intel (top menu item, primary delivery platform, estimated commission spend, review themes).
-
-**Bilingual mode** — Spanish lines to speak, English translation underneath.
-
-### 📊 Manager view — patterns across the team
-
-- **Themes & Topics** — What Works / What Doesn't, plus 4 inline charts (opener × outcome, language mix, top objections, competitor mentions)
-- **Slice & Dice** — same patterns filtered by cuisine, business type, location. Filters apply in <10ms because they intersect pre-computed evidence rather than re-running the LLM.
-- **Team Performance** — per-rep coaching cards with tier classification (top / mid / needs-coaching) and narrative coaching
-- **Competitor Watch** — live Tavily research on Toast, ChowNow, Popmenu, Square for Restaurants, HungerRush
 
 ## How it works
 
