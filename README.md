@@ -1,213 +1,158 @@
 <div align="center">
 
-# Owner.com Sales Intelligence Tech Case Study
+# Owner.com Sales Intelligence
 
-**A two-view sales platform that turns call transcripts into rep playbooks and manager coaching.**
+**Turning call transcripts into rep playbooks and manager coaching.**
 
 ![Python](https://img.shields.io/badge/python-3.10+-blue?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 ![Anthropic](https://img.shields.io/badge/Claude-Opus%20%2B%20Haiku-D97757?logo=anthropic&logoColor=white)
 ![Tavily](https://img.shields.io/badge/Tavily-web%20intel-7170ff)
 ![ElevenLabs](https://img.shields.io/badge/ElevenLabs-TTS-000000)
-![Bilingual](https://img.shields.io/badge/lang-EN%20%2B%20ES-facc15)
-![No build step](https://img.shields.io/badge/frontend-vanilla%20JS-yellow)
-
 
 </div>
 
----
+## The problem
 
-## A note on the data
+Sales teams sit on hundreds of call transcripts and never read them. Reps walk into the next call without knowing what worked on the last one. Managers can't tell which patterns drive wins versus which reps need help.
 
-The csvs/data files are **not committed to this repo.** To run against the real dataset, drop the original `restaurants.csv` and `calls.csv` into `data/` locally and the app picks them up.
+This case study builds a two-view tool that fixes both sides:
 
----
+- **Reps** get a personalized script for each prospect, before the call.
+- **Managers** get aggregated patterns across the team, plus per-rep coaching.
 
-## What it does
+## The two views
 
-### Rep view — a screenplay-style script
+### 🎯 Rep view — a teleprompter for the call
 
-Single-screen teleprompter the rep reads top-to-bottom during the call. Five stages with the exact words to say:
+A single screen the rep reads top-to-bottom. Five stages, exact words to say:
 
-```
-▸ START WITH:    The opener (personalized: top dish, platform, spend)
-▸ THEN ASK:      One discovery question
-▸ THEN PITCH:    The dollar math + value prop
-▸ IF THEY PUSH BACK:  Five They-Say / You-Say pairs
-▸ CLOSE WITH:    Calendar-anchored ask
-```
+| Stage | What it gives the rep |
+|---|---|
+| **Open** | Personalized hook (top dish, delivery platform, est. spend) |
+| **Ask** | One discovery question |
+| **Pitch** | Dollar math + value prop |
+| **Handle pushback** | Five They-Say / You-Say pairs |
+| **Close** | Calendar-anchored ask |
 
-Each line is personalized using the prospect's restaurant data and Tavily-enriched intel (top menu item, primary delivery platform, estimated commission spend, review themes).
+Every line is personalized using the prospect's restaurant data plus live Tavily web intel (top menu item, primary delivery platform, estimated commission spend, review themes).
 
-🌐 **Bilingual mode** — Spanish lines for the rep to speak with English translations underneath, so they always know what they're saying.
+**Bilingual mode** — Spanish lines to speak, English translation underneath.
 
-**"Hear similar wins"** — ElevenLabs TTS of past won calls, prioritized by cuisine match(NOT IMPLEMENTED)
+### 📊 Manager view — patterns across the team
 
-### Manager view — pattern extraction across the team
+- **Themes & Topics** — What Works / What Doesn't, plus 4 inline charts (opener × outcome, language mix, top objections, competitor mentions)
+- **Slice & Dice** — same patterns filtered by cuisine, business type, location. Filters apply in <10ms because they intersect pre-computed evidence rather than re-running the LLM.
+- **Team Performance** — per-rep coaching cards with tier classification (top / mid / needs-coaching) and narrative coaching
+- **Competitor Watch** — live Tavily research on Toast, ChowNow, Popmenu, Square for Restaurants, HungerRush
 
-- **Themes & Topics** — aggregated What Works / What Doesn't patterns plus 4 inline mini-charts (opener × outcome, language mix, top objections, competitor mentions)
-- **Slice & Dice** — same patterns, filterable by cuisine, business type, locations. Filters apply in <10ms because they intersect pre-computed evidence rather than re-running LLMs
-- **Team Performance** — per-rep coaching cards with tier classification (top / mid / needs-coaching) plus narrative coaching
-- **Competitor Watch** — live Tavily web research summaries for Toast, ChowNow, Popmenu, Square for Restaurants, HungerRush
-
----
-
-## Architecture
+## How it works
 
 ```
-                 ┌──────────────────────────────────────────┐
-                 │            Browser SPA                    │
-                 │   vanilla JS · dark mode · gzipped 33KB  │
-                 │     ┌──────────────┬─────────────────┐   │
-                 │     │  Manager UI  │     Rep UI      │   │
-                 │     └──────┬───────┴────────┬────────┘   │
-                 └────────────┼────────────────┼────────────┘
-                              │ REST           │ REST
-                              ▼                ▼
-                 ┌──────────────────────────────────────────┐
-                 │            FastAPI server                 │
-                 │   GZip · Cache headers · Cookie auth     │
-                 │   /synthesis  /brief  /intel  /audio     │
-                 └────────────┬─────────────────┬───────────┘
-                              │                 │
-                              ▼                 ▼
-                 ┌──────────────────────┐  ┌──────────────────┐
-                 │   Pipeline           │  │  Lazy enrichment │
-                 │   (one-shot run)     │  │  (per request)   │
-                 │                      │  │                  │
-                 │   extract_all       │  │  agent_account   │
-                 │   run_synthesis     │  │     _intel       │
-                 │   build_brief       │  │  (Tavily web)    │
-                 └──────────┬───────────┘  └──────────────────┘
-                            │
-                            ▼
-                 ┌──────────────────────────────────────────┐
-                 │           Multi-agent layer               │
-                 │                                           │
-                 │   ┌─────────────┐                        │
-                 │   │ Orchestrator│  Claude Opus           │
-                 │   │             │  reasoning + planning  │
-                 │   └──┬─────┬─┬──┘                        │
-                 │      │     │ │                            │
-                 │   ┌──▼─┐ ┌─▼┐ ┌──▼──┐  ┌────┐            │
-                 │   │ext │ │wk│ │coach│  │comp│  Claude    │
-                 │   │act │ │/ │ │     │  │    │  Haiku     │
-                 │   └────┘ │ds│ └─────┘  └────┘  parallel  │
-                 │          └──┘                             │
-                 │                                           │
-                 │   8-worker ThreadPool · prompt caching   │
-                 │   on extraction system prompt             │
-                 └──────────────────────────────────────────┘
-                            │                 │
-                            ▼                 ▼
-                       ┌────────┐        ┌────────┐
-                       │  CSV   │        │ Tavily │
-                       │  data  │        │  web   │
-                       └────────┘        └────────┘
+Browser SPA (vanilla JS)
+        │
+        ▼
+FastAPI server  ──────────────►  Lazy enrichment (Tavily web intel)
+        │
+        ▼
+Multi-agent layer
+   ├── Orchestrator      (Claude Opus — reasoning + planning)
+   └── Workers           (Claude Haiku — extract, synthesize, coach, compete)
+        │
+        ▼
+   CSV data (transcripts + restaurants)
 ```
----
+
+**Two execution modes:**
+- **Pipeline** runs once over all transcripts: extract → synthesize → build briefs.
+- **Lazy enrichment** runs per request: Tavily web search for fresh account intel.
+
+8-worker thread pool with prompt caching on the extraction system prompt keeps it fast.
 
 ## Run it
-
-**1. Clone and install**
 
 ```bash
 git clone https://github.com/<your-username>/owner-case-study.git
 cd owner-case-study
 pip install -r requirements.txt
-```
-
-**2. Set your API keys**
-
-```bash
 cp .env.example .env
 ```
 
-Then open `.env` and add:
+Add your keys to `.env`:
 
 ```
-ANTHROPIC_API_KEY=sk-ant-...      # required — powers extraction + synthesis
-TAVILY_API_KEY=tvly-...           # required — live web research for account intel
-ELEVENLABS_API_KEY=...            # optional — only used for "hear similar wins" audio playback
+ANTHROPIC_API_KEY=sk-ant-...   # required — extraction + synthesis
+TAVILY_API_KEY=tvly-...        # required — live web research
+ELEVENLABS_API_KEY=...         # optional — TTS for "hear similar wins"
 ```
 
-**3. Drop in the dataset**
-
-Place `restaurants.csv` and `calls.csv` into `data/csv`
-
-**4. Run**
+Drop `restaurants.csv` and `calls.csv` into `data/csv/`, then:
 
 ```bash
 python server.py
 ```
 
-Visit http://localhost:8000 and pick:
+Visit `http://localhost:8000` and log in as:
+- **Sales Rep** — Sarah Kim (`rep_sarah`)
+- **Sales Manager** — Maria Lopez (`mgr_maria`)
 
-- **Sales Rep** (Sarah Kim, `rep_sarah`)
-- **Sales Manager** (Maria Lopez, `mgr_maria`)
-
----
+> **Note on data:** the CSVs are not committed. Drop the original `restaurants.csv` and `calls.csv` into `data/csv/` to run against the real dataset.
 
 ## API
 
+**Auth**
 ```
-POST /api/login · /api/logout · GET /api/me
-
-POST /api/pipeline/run               (manager) kicks the pipeline
-GET  /api/pipeline/status            live status + progress
-
-GET  /api/synthesis?segment=&slim=   (manager) instant filter, no LLM
-GET  /api/charts?segment=            (manager) chart-ready aggregates
-GET  /api/segments                   (manager) available filter values
-
-GET  /api/queue                      (rep) today's call list
-GET  /api/brief/{rid}?lang=          (rep) personalized pre-call brief
-GET  /api/intel/{rid}?lang=          (rep) lazy Tavily-enriched intel
-GET  /api/similar_calls/{rid}        (rep) won calls, cuisine-prioritized
-GET  /api/audio/{call_id}            (rep) ElevenLabs TTS of transcript
-GET  /api/my_stats · /api/coaching
-
-POST /api/note                       (manager) send coaching note
-POST /api/notes/{id}/ack             (rep) acknowledge note
+POST /api/login   POST /api/logout   GET /api/me
 ```
 
----
+**Manager**
+```
+POST /api/pipeline/run            kick off pipeline
+GET  /api/pipeline/status         progress + status
+GET  /api/synthesis?segment=      filtered patterns (no LLM)
+GET  /api/charts?segment=         chart aggregates
+GET  /api/segments                available filter values
+POST /api/note                    send coaching note
+```
+
+**Rep**
+```
+GET  /api/queue                   today's call list
+GET  /api/brief/{rid}?lang=       pre-call brief
+GET  /api/intel/{rid}?lang=       Tavily-enriched intel
+GET  /api/similar_calls/{rid}     cuisine-matched won calls
+GET  /api/audio/{call_id}         ElevenLabs TTS
+GET  /api/my_stats   /api/coaching
+POST /api/notes/{id}/ack          acknowledge a coaching note
+```
 
 ## File layout
 
 ```
 owner_app/
-├── server.py                FastAPI + all routes
-├── pipeline.py              extract / synthesize / build_brief
-├── agents.py                multi-agent layer (Opus + Haiku + Tavily)
-├── _fields.py               CSV column-name normalization
-├── data_csv.py              CSV loaders with in-memory cache
-├── synthetic_signals.py     demo signal generator
-├── tts.py                   ElevenLabs TTS
-├── data/csv                    seed CSVs (add real data here locally)
-├── static/
-│   ├── login.html · app.html
-│   ├── style.css            dark mode (~3500 lines, 14KB gzipped)
-│   ├── i18n.js              EN/ES dictionary
-│   └── app.js               SPA (~1400 lines, 14KB gzipped)
-└── README.md
+├── server.py              FastAPI + routes
+├── pipeline.py            extract / synthesize / build_brief
+├── agents.py              multi-agent layer (Opus + Haiku + Tavily)
+├── _fields.py             CSV column normalization
+├── data_csv.py            CSV loaders + cache
+├── synthetic_signals.py   demo signal generator
+├── tts.py                 ElevenLabs TTS
+├── data/csv/              seed CSVs (add real data here)
+└── static/
+    ├── login.html · app.html
+    ├── style.css          ~3500 lines, 14KB gzipped
+    ├── i18n.js            EN/ES dictionary
+    └── app.js             SPA, ~1400 lines, 14KB gzipped
 ```
 
----
+## Auth (demo only)
 
-## Auth (demo)
-
-Two hardcoded users with cookie-based sessions: `rep_sarah` and `mgr_maria`. The Manager/Rep toggle in the topbar flips views without re-login. This is demo-grade — real auth (OAuth + RBAC) is in next steps.
-
----
+Two hardcoded cookie sessions: `rep_sarah` and `mgr_maria`. The Manager/Rep toggle flips views without re-login. **Demo-grade** — real auth is in Next Steps.
 
 ## Next steps
 
-A few things I'd add next:
+**Real auth + RBAC.** Hardcoded cookies are fine for a demo, not a pilot. v2 is Google Workspace SSO with per-role permissions: reps see only their queue, managers see their direct reports, admins manage the roster. The role check already exists in `require_role()` — it just needs real identity behind it.
 
-- Real auth + RBACs: Right now login is a hardcoded cookie (`rep_sarah` / `mgr_maria`) — fine for a demo, not for a pilot. The right v2 is Google Workspace SSO with per-role permissions: reps see only their own queue and stats, managers see their direct reports' calls, admins manage the team roster. The role check already exists in `require_role()` — it just needs real identity behind it.
+**Real audio for similar wins.** Right now "hear similar wins" is ElevenLabs TTS of a transcript. Real won-call audio (with consent + redaction) would land harder — reps trust patterns they can hear in someone's voice. Bonus: rep-voice cloning so "here's how Sarah opened a similar deal" actually sounds like Sarah.
 
-- Real audio for similar wins: Right now "hear similar wins" plays ElevenLabs TTS of a transcript. Real won-call audio (with consent + redaction) would land harder — reps trust patterns they can hear in someone's voice, not synthetic narration. Bonus: rep-voice cloning so "here's how Sarah opened a similar deal" actually sounds like Sarah.
-
-- UI polish The dark-mode works but a few things would tighten it: smoother loading transitions on the manager dashboard (right now it pops in), better empty states across the board, mobile responsiveness for the rep teleprompter (works but isn't optimized), and a proper onboarding tour for first-time users.
-
+**UI polish.** Smoother loading on the manager dashboard, better empty states, mobile-responsive teleprompter, and a first-time onboarding tour.
