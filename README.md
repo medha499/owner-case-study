@@ -199,7 +199,7 @@ owner_app/
 ├── data_csv.py              CSV loaders with in-memory cache
 ├── synthetic_signals.py     demo signal generator
 ├── tts.py                   ElevenLabs TTS
-├── data/                    seed CSVs (gitignored — drop real data here locally)
+├── data/csv                   seed CSVs (gitignored — drop real data here locally)
 ├── static/
 │   ├── login.html · app.html
 │   ├── style.css            dark mode (~3500 lines, 14KB gzipped)
