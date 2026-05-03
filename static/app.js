@@ -233,6 +233,7 @@ async function pollPipelineStatus() {
         APP_STATE.filters = {cuisine: [], business_type: [], locations: []};
         APP_STATE.overallSynthesis = null;
         APP_STATE.overallCharts = null;
+        APP_STATE.repCards = null;  // force warm-up fetch on next loadSynthesis
         await loadSynthesis();
         await renderPage();
       } else if (s.status === "idle") {
@@ -267,6 +268,11 @@ async function loadSynthesis() {
         // Slim version doesn't have rep_cards; only set as overall if not already set with full data
         APP_STATE.overallSynthesis = APP_STATE.overallSynthesis || data;
       }
+      // Persist rep_cards across tabs whenever the full payload arrives.
+      // Once cached, switching to Team is instant — no refetch, no flicker.
+      if (Array.isArray(data.rep_cards) && data.rep_cards.length) {
+        APP_STATE.repCards = data.rep_cards;
+      }
     }
   } catch (e) {}
   try {
@@ -277,6 +283,22 @@ async function loadSynthesis() {
       if (segStr === "all") APP_STATE.overallCharts = data;
     }
   } catch (e) {}
+
+  // Pre-warm rep_cards for the Team tab so it's ready when clicked, even if
+  // the user is currently on Themes/Slice (where we use slim=1 above).
+  // Fires once per pipeline run for the unfiltered segment only.
+  if (!APP_STATE.repCards) {
+    fetch("/api/synthesis?segment=all&slim=0").then(r => r.ok ? r.json() : null).then(full => {
+      if (full && Array.isArray(full.rep_cards) && full.rep_cards.length) {
+        APP_STATE.repCards = full.rep_cards;
+        // If user is currently looking at the Team tab while we were warming,
+        // re-render so the cards appear without requiring a tab switch.
+        if (APP_STATE.page === "team") {
+          renderPage();
+        }
+      }
+    }).catch(() => {});
+  }
 }
 
 async function ensureOverallLoaded() {
@@ -544,7 +566,9 @@ function skeletonGrid() {
 }
 
 function renderTeam(root) {
-  const cards = APP_STATE.synthesis?.rep_cards || [];
+  // Prefer the persistent cache (survives tab switches and segment filter changes).
+  // Fall back to the current synthesis payload if the cache hasn't been populated yet.
+  const cards = APP_STATE.repCards || APP_STATE.synthesis?.rep_cards || [];
   let tier = APP_STATE.teamFilter || "all";
 
   let html = `<div class="filter-pills">
