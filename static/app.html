@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Owner.com Sales Intelligence</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo-mark sm"></div>
+      <div>
+        <div class="brand-name">Owner.com</div>
+        <div class="brand-sub">Sales Intelligence</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav" id="sidebar-nav"></nav>
+
+    <div class="sidebar-status">
+      <div class="status-row">
+        <span class="status-label" data-i18n="pipeline">Pipeline</span>
+        <span class="status-pill" id="pipeline-pill">idle</span>
+      </div>
+      <div id="pipeline-progress-wrap" style="display:none">
+        <div class="status-progress">
+          <div class="status-progress-bar" id="pipeline-progress-bar" style="width:0%"></div>
+        </div>
+        <div class="status-msg" id="pipeline-msg"></div>
+      </div>
+      <button class="status-btn" id="run-pipeline-btn" onclick="runPipeline()">
+        <span data-i18n="run_pipeline">Run pipeline</span>
+      </button>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user" id="sidebar-user"></div>
+      <button class="logout-btn" onclick="logout()" data-i18n="logout">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 id="topbar-title">Dashboard</h1>
+        <div class="topbar-sub" id="topbar-sub"></div>
+      </div>
+      <div class="topbar-right">
+        <div class="lang-toggle">
+          <button class="lang-btn active" data-lang="en" onclick="switchLang('en')">EN</button>
+          <button class="lang-btn" data-lang="es" onclick="switchLang('es')">ES</button>
+        </div>
+        <div class="role-toggle">
+          <button class="role-toggle-btn" data-role="manager" onclick="switchRole('manager')">Manager</button>
+          <button class="role-toggle-btn" data-role="rep" onclick="switchRole('rep')">Rep</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="kpi-grid" id="kpi-grid" style="display:none"></section>
+
+    <section class="page-content" id="page-content">
+      <div class="empty-state">
+        <div class="empty-state-spinner"></div>
+        <div class="empty-state-title" data-i18n="loading">Loading…</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modal-title"></h3>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/static/i18n.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

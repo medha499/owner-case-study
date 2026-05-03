@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Owner.com Sales Intelligence</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="login-body">
+
+<div class="login-bg-grid"></div>
+
+<div class="login-container">
+  <div class="login-hero">
+    <div class="login-logo"><div class="logo-mark"></div></div>
+    <h1 class="login-brand">Owner<span class="brand-dot">.</span>com</h1>
+    <p class="login-tagline" id="tagline">Sales Intelligence built for restaurant reps</p>
+  </div>
+
+  <div class="login-card">
+    <div class="lang-switcher">
+      <button class="lang-btn active" data-lang="en" onclick="switchLang('en')">EN</button>
+      <button class="lang-btn" data-lang="es" onclick="switchLang('es')">ES</button>
+    </div>
+
+    <h2 id="signin-title">Sign in</h2>
+    <p class="login-sub" id="signin-sub">Choose a role to enter the demo.</p>
+
+    <div id="error" class="login-error" style="display:none"></div>
+
+    <div class="role-buttons">
+      <button class="role-btn role-btn-rep" onclick="login('rep')">
+        <div class="role-btn-content">
+          <div class="role-icon">SK</div>
+          <div class="role-text">
+            <div class="role-name" id="rep-name">Sales Rep</div>
+            <div class="role-sub" id="rep-sub">Sarah Kim · Daily queue, briefs, coaching</div>
+          </div>
+          <div class="role-arrow">→</div>
+        </div>
+      </button>
+
+      <button class="role-btn role-btn-mgr" onclick="login('manager')">
+        <div class="role-btn-content">
+          <div class="role-icon mgr">ML</div>
+          <div class="role-text">
+            <div class="role-name" id="mgr-name">Sales Manager</div>
+            <div class="role-sub" id="mgr-sub">Maria Lopez · Team insights, patterns, coaching</div>
+          </div>
+          <div class="role-arrow">→</div>
+        </div>
+      </button>
+    </div>
+
+    <div class="login-meta">
+      <div class="meta-pill">
+        <span class="meta-dot"></span>
+        <span id="status-text">Multi-agent system ready</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const STRINGS = {
+  en: {
+    tagline: "Sales Intelligence built for restaurant reps",
+    title: "Sign in",
+    sub: "Choose a role to enter the demo.",
+    rep_name: "Sales Rep",
+    rep_sub: "Sarah Kim · Daily queue, briefs, coaching",
+    mgr_name: "Sales Manager",
+    mgr_sub: "Maria Lopez · Team insights, patterns, coaching",
+    status: "Multi-agent system ready"
+  },
+  es: {
+    tagline: "Inteligencia de Ventas para representantes",
+    title: "Iniciar sesión",
+    sub: "Elija un rol para entrar al demo.",
+    rep_name: "Representante",
+    rep_sub: "Sarah Kim · Cola diaria, resúmenes, coaching",
+    mgr_name: "Gerente de Ventas",
+    mgr_sub: "Maria Lopez · Equipo, patrones, coaching",
+    status: "Sistema multi-agente listo"
+  }
+};
+
+let currentLang = localStorage.getItem("lang") || "en";
+
+function applyLang() {
+  const s = STRINGS[currentLang];
+  document.getElementById("tagline").textContent = s.tagline;
+  document.getElementById("signin-title").textContent = s.title;
+  document.getElementById("signin-sub").textContent = s.sub;
+  document.getElementById("rep-name").textContent = s.rep_name;
+  document.getElementById("rep-sub").textContent = s.rep_sub;
+  document.getElementById("mgr-name").textContent = s.mgr_name;
+  document.getElementById("mgr-sub").textContent = s.mgr_sub;
+  document.getElementById("status-text").textContent = s.status;
+  document.querySelectorAll(".lang-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.lang === currentLang);
+  });
+}
+
+function switchLang(lang) {
+  currentLang = lang;
+  localStorage.setItem("lang", lang);
+  applyLang();
+}
+
+async function login(username) {
+  const errEl = document.getElementById("error");
+  errEl.style.display = "none";
+  try {
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({username})
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      errEl.textContent = data.detail || "Login failed";
+      errEl.style.display = "block";
+      return;
+    }
+    window.location.href = "/app";
+  } catch (e) {
+    errEl.textContent = "Network error";
+    errEl.style.display = "block";
+  }
+}
+
+applyLang();
+</script>
+</body>
+</html>
