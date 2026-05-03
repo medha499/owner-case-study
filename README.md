@@ -143,7 +143,7 @@ Visit http://localhost:8000 and pick:
 - 🎙 **Sales Rep** (Sarah Kim, `rep_sarah`)
 - 📊 **Sales Manager** (Maria Lopez, `mgr_maria`)
 
-To run against the real evaluation dataset: drop the original `restaurants.csv` and `calls.csv` into `data/` and restart. The app picks them up automatically.
+To run against the real evaluation dataset: drop the original `restaurants.csv` and `calls.csv` into `data/csv/` and restart. The app picks them up automatically.
 
 ---
 
